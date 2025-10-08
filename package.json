@@ -1,0 +1,10 @@
+{
+  "name": "agent-factory",
+  "private": true,
+  "workspaces": ["apps/*"],
+  "scripts": {
+    "test:unit": "pytest -q",
+    "test:e2e": "npx playwright test",
+    "test": "npm run test:unit && npm run test:e2e"
+  }
+}
