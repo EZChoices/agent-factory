@@ -19,11 +19,16 @@ jobs:
     defaults:
       run:
         shell: pwsh
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Ensure PowerShell can run scripts
+        shell: pwsh
+        run: Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -36,14 +41,22 @@ jobs:
           $env:PATH = "C:\Program Files\Python310;$env:PATH"
           python --version
 
+      - name: Environment health check
+        shell: pwsh
+        run: |
+          Write-Host "Node version:"; node -v
+          Write-Host "Python version:"; python --version
+          Write-Host "Git version:"; git --version
+
       - name: Install dependencies
         run: |
-          if (Test-Path package.json) { npm ci }
+          python -m pip install --upgrade pip
           if (Test-Path requirements.txt) { pip install -r requirements.txt }
+          if (Test-Path package.json) { npm ci }
 
       - name: Install Playwright browsers
         run: |
-          npx playwright install
+          try { npx playwright install } catch { Write-Host "Playwright already installed." }
 
       - name: Run patch/apply script
         run: |
