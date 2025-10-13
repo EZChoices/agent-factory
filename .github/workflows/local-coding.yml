@@ -2,6 +2,8 @@ name: Local Speed Runner
 
 on:
   workflow_dispatch:
+  repository_dispatch:
+    types: [nightly_ticket]
   push:
     branches:
       - dev
@@ -13,7 +15,7 @@ permissions:
 
 jobs:
   build-and-test:
-    runs-on:s [elf-hosted, Windows, X64]
+    runs-on: [self-hosted, Windows, X64]
     defaults:
       run:
         shell: pwsh
