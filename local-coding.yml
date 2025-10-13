@@ -1,41 +1,66 @@
 name: local-coding
+
 on:
   repository_dispatch:
     types: [nightly_ticket]
   workflow_dispatch:
+
 jobs:
   build-test-commit:
-    runs-on: self-hosted
+    runs-on: [self-hosted, Windows, X64]
+    defaults:
+      run:
+        shell: pwsh
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: '20' }
-      - uses: actions/setup-python@v5
-        with: { python-version: '3.11' }
-      - run: pip install pytest
-      - run: npm ci || pnpm i || yarn
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # 👇 Replaced setup-python with local Python reference
+      - name: Use local Python installation
+        shell: pwsh
+        run: |
+          $env:PATH = "C:\Program Files\Python310;$env:PATH"
+          python --version
+          pip install --upgrade pip
+          pip install pytest
+
+      # 👇 Moved npm/yarn install step
+      - name: Install JS dependencies
+        run: npm ci || pnpm i || yarn
+
       - name: Apply agent patch
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           python scripts/request_patch_and_apply.py
+
       - name: Run tests (e2e + unit)
         run: |
           npx playwright install --with-deps
           npx playwright test
           pytest -q
+
       - name: Commit & push if OK
         if: success()
         run: |
-          if [ -f .patch_applied_ok ]; then
-            git config user.name "agent-runner"
+          if (Test-Path .patch_applied_ok) {
+            git config user.name  "agent-runner"
             git config user.email "agent@local"
-            git checkout -b feat/agent-${{ github.run_id }} || true
-            git add -A && git commit -m "Agent patch $GITHUB_RUN_ID" || true
+            git checkout -b "feat/agent-${{ github.run_id }}" -ErrorAction SilentlyContinue
+            git add -A
+            git commit -m "Agent patch $env:GITHUB_RUN_ID" -ErrorAction SilentlyContinue
             git push -u origin HEAD
-          fi
+          }
+
       - name: Open PR
         if: success()
-        env: { GH_TOKEN: ${{ secrets.GH_TOKEN }} }
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          gh pr create --title "Agent PR $GITHUB_RUN_ID" --body "Auto-generated" --base main --head "$(git branch --show-current)"
+          gh pr create --title "Agent PR $env:GITHUB_RUN_ID" --body "Auto-generated" --base main --head "$(git branch --show-current)"
