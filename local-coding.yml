@@ -16,38 +16,71 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Ensure PowerShell can run scripts
+        shell: pwsh
+        run: Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      # 👇 Replaced setup-python with local Python reference
       - name: Use local Python installation
         shell: pwsh
         run: |
           $env:PATH = "C:\Program Files\Python310;$env:PATH"
           python --version
-          pip install --upgrade pip
+          python -m pip install --upgrade pip
           pip install pytest
 
-      # 👇 Moved npm/yarn install step
-      - name: Install JS dependencies
-        run: npm ci || pnpm i || yarn
+      - name: Environment health check
+        shell: pwsh
+        run: |
+          Write-Host "Node version:"; node -v
+          Write-Host "Python version:"; python --version
+          Write-Host "Git version:"; git --version
+
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          if (Test-Path requirements.txt) { pip install -r requirements.txt }
+          if (Test-Path package-lock.json) {
+            npm ci
+          } elseif (Test-Path package.json) {
+            npm install
+          } else {
+            Write-Host "⚠️  No JS project detected, skipping npm/yarn install."
+          }
+
+      - name: Install Playwright browsers
+        shell: pwsh
+        run: |
+          try { npx playwright install } catch { Write-Host "Playwright already installed." }
 
       - name: Apply agent patch
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        shell: pwsh
         run: |
-          python scripts/request_patch_and_apply.py
+          if (Test-Path scripts/request_patch_and_apply.py) {
+            python scripts/request_patch_and_apply.py
+          } else {
+            Write-Host "⚠️  Patch script not found, skipping."
+          }
 
       - name: Run tests (e2e + unit)
+        shell: pwsh
         run: |
-          npx playwright install --with-deps
-          npx playwright test
-          pytest -q
+          if (Test-Path package.json) { 
+            npx playwright install --with-deps
+            npx playwright test
+          }
+          if (Test-Path tests) { pytest -q }
 
       - name: Commit & push if OK
         if: success()
+        shell: pwsh
         run: |
           if (Test-Path .patch_applied_ok) {
             git config user.name  "agent-runner"
@@ -56,11 +89,18 @@ jobs:
             git add -A
             git commit -m "Agent patch $env:GITHUB_RUN_ID" -ErrorAction SilentlyContinue
             git push -u origin HEAD
+          } else {
+            Write-Host "⚠️  No patch applied flag found, skipping commit."
           }
 
       - name: Open PR
         if: success()
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        shell: pwsh
         run: |
-          gh pr create --title "Agent PR $env:GITHUB_RUN_ID" --body "Auto-generated" --base main --head "$(git branch --show-current)"
+          gh pr create `
+            --title "Agent PR $env:GITHUB_RUN_ID" `
+            --body "Auto-generated PR from Local Runner" `
+            --base main `
+            --head "$(git branch --show-current)"
