@@ -19,6 +19,7 @@ jobs:
     defaults:
       run:
         shell: pwsh
+        working-directory: ${{ github.workspace }}
 
     steps:
       - name: Checkout repository
