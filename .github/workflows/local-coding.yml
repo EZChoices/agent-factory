@@ -20,9 +20,6 @@ jobs:
       run:
         shell: pwsh
         working-directory: ${{ github.workspace }}
-    env:
-      GIT_DIR: ${{ github.workspace }}/.git
-      GIT_WORK_TREE: ${{ github.workspace }}
 
     steps:
       - name: Checkout repository
