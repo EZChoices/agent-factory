@@ -23,11 +23,11 @@ jobs:
         working-directory: ${{ github.workspace }}
 
     steps:
+      # 🧩 Checkout using SSH (supports large files)
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          # ✅ Use SSH key for push/checkout steps
           ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Ensure PowerShell can run scripts
@@ -110,7 +110,8 @@ jobs:
           git remote set-url origin git@github.com:EZChoices/agent-factory.git
           git remote -v
 
-      - name: Create branch + commit changes
+      # ✅ Create and push branch via SSH (handles large files)
+      - name: Create branch + commit changes (SSH)
         run: |
           cd $env:GITHUB_WORKSPACE
           $branch = "auto/patch-${{ github.run_id }}"
@@ -120,8 +121,15 @@ jobs:
           $sshCmd = 'C:/Windows/System32/OpenSSH/ssh.exe -i C:/Users/maanh/.ssh/id_agent_runner -o IdentitiesOnly=yes -o StrictHostKeyChecking=no'
           git -c "core.sshCommand=$sshCmd" push -f origin $branch
 
-      # ✅ Create the PR using GITHUB_TOKEN (HTTPS auth, not SSH)
-      - name: Open Pull Request
+      # 🔄 Temporarily switch to HTTPS just for PR creation
+      - name: Switch remote to HTTPS for PR
+        run: |
+          cd $env:GITHUB_WORKSPACE
+          git remote set-url origin https://github.com/EZChoices/agent-factory.git
+          git remote -v
+
+      # 🪄 Create PR using GITHUB_TOKEN (required by v6)
+      - name: Create Pull Request
         id: cpr
         uses: peter-evans/create-pull-request@v6
         with:
@@ -135,8 +143,8 @@ jobs:
           committer: "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
           author: "EZChoices <199622373+EZChoices@users.noreply.github.com>"
 
-      # ✅ Auto-merge PR after creation (replaces old merge-method)
-      - name: Enable auto-merge
+      # ✅ Auto-merge PR after creation
+      - name: Enable auto-merge (squash)
         if: steps.cpr.outputs.pull-request-number != ''
         uses: peter-evans/enable-pull-request-automerge@v3
         with:
@@ -144,7 +152,15 @@ jobs:
           pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
           merge-method: squash
 
-      # ✅ Graceful exit if nothing changed
+      # ✅ Graceful exit if no changes
       - name: Auto-close if no changes
         if: steps.cpr.outputs.pull-request-number == ''
         run: echo "No new changes detected — ending workflow gracefully."
+
+      # 🔁 Restore SSH remote for next run (for future large pushes)
+      - name: Restore SSH remote for future runs
+        if: always()
+        run: |
+          cd $env:GITHUB_WORKSPACE
+          git remote set-url origin git@github.com:EZChoices/agent-factory.git
+          git remote -v
