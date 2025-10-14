@@ -115,8 +115,10 @@ jobs:
         shell: pwsh
         run: |
           cd $env:GITHUB_WORKSPACE
-          $env:GIT_SSH_COMMAND = "ssh -i C:/Users/maanh/.ssh/id_agent_runner -o IdentitiesOnly=yes"
+          # Explicitly call full ssh.exe path and your private key
+          $env:GIT_SSH_COMMAND = 'C:/Windows/System32/OpenSSH/ssh.exe -i C:/Users/maanh/.ssh/id_agent_runner -o IdentitiesOnly=yes -o StrictHostKeyChecking=no'
           git remote set-url origin git@github.com:EZChoices/agent-factory.git
+          git remote -v
 
       - name: Verify SSH remote
         shell: pwsh
