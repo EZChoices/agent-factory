@@ -115,6 +115,7 @@ jobs:
         shell: pwsh
         run: |
           cd $env:GITHUB_WORKSPACE
+          $env:GIT_SSH_COMMAND = "ssh -i C:/Users/maanh/.ssh/id_agent_runner -o IdentitiesOnly=yes"
           git remote set-url origin git@github.com:EZChoices/agent-factory.git
 
       - name: Verify SSH remote
