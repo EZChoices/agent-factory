@@ -126,7 +126,7 @@ jobs:
           cd $env:GITHUB_WORKSPACE
           git remote -v
 
-      - name: Create branch + commit
+      - name: Create branch + commit (SSH forced)
         shell: pwsh
         run: |
           cd $env:GITHUB_WORKSPACE
@@ -134,7 +134,10 @@ jobs:
           git checkout -b $branch
           git add -A
           git commit -m "Auto patch via Local Coding Runner (run ${{ github.run_id }})" || echo "No changes to commit"
-          git push --set-upstream origin $branch
+
+          # Explicitly use your SSH key for this push
+          $sshCmd = 'C:/Windows/System32/OpenSSH/ssh.exe -i C:/Users/maanh/.ssh/id_agent_runner -o IdentitiesOnly=yes -o StrictHostKeyChecking=no'
+          git -c "core.sshCommand=$sshCmd" push --set-upstream origin $branch
 
       - name: Open PR
         uses: peter-evans/create-pull-request@v6
