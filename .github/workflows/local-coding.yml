@@ -110,6 +110,19 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+      # 🧩 NEW SSH CONFIG STEP
+      - name: Configure git remote to use SSH
+        shell: pwsh
+        run: |
+          cd $env:GITHUB_WORKSPACE
+          git remote set-url origin git@github.com:EZChoices/agent-factory.git
+
+      - name: Verify SSH remote
+        shell: pwsh
+        run: |
+          cd $env:GITHUB_WORKSPACE
+          git remote -v
+
       - name: Create branch + commit
         shell: pwsh
         run: |
