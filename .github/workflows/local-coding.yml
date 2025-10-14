@@ -110,7 +110,16 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      # 🧩 NEW SSH CONFIG STEP
+      - name: Remove large binary before committing
+        shell: pwsh
+        run: |
+          # Delete the large Next.js SWC binary if it exists
+          $swcPath = "node_modules/@next/swc-win32-x64-msvc/next-swc.win32-x64-msvc.node"
+          if (Test-Path $swcPath) {
+            Write-Host "Deleting large file: $swcPath"
+            Remove-Item $swcPath -Force
+          }
+
       - name: Configure git remote to use SSH
         shell: pwsh
         run: |
@@ -134,6 +143,7 @@ jobs:
           git checkout -b $branch
           git add -A
           git commit -m "Auto patch via Local Coding Runner (run ${{ github.run_id }})" || echo "No changes to commit"
+          git push --set-upstream origin $branch
 
           # Explicitly use your SSH key for this push
           $sshCmd = 'C:/Windows/System32/OpenSSH/ssh.exe -i C:/Users/maanh/.ssh/id_agent_runner -o IdentitiesOnly=yes -o StrictHostKeyChecking=no'
