@@ -103,10 +103,18 @@ jobs:
           git config user.name  "Maan Runner"
           git config user.email "maan-runner@users.noreply.github.com"
 
+      # 🔐 Prepare SSH key from GitHub secret (RUNNER_SSH_KEY)
+      - name: Prepare SSH key
+        run: |
+          mkdir C:\tempkey -Force
+          Set-Content -Path C:\tempkey\id_agent_runner -Value "${{ secrets.RUNNER_SSH_KEY }}" -NoNewline
+          icacls C:\tempkey\id_agent_runner /inheritance:r /grant:r "Users:R"
+          Write-Host "✅ SSH key written to C:\\tempkey\\id_agent_runner"
+
       - name: Configure Git remote (SSH)
         run: |
           cd $env:GITHUB_WORKSPACE
-          $env:GIT_SSH_COMMAND = 'C:/Windows/System32/OpenSSH/ssh.exe -i C:/Users/maanh/.ssh/id_agent_runner -o IdentitiesOnly=yes -o StrictHostKeyChecking=no'
+          $env:GIT_SSH_COMMAND = 'C:/Windows/System32/OpenSSH/ssh.exe -i C:/tempkey/id_agent_runner -o IdentitiesOnly=yes -o StrictHostKeyChecking=no'
           git remote set-url origin git@github.com:EZChoices/agent-factory.git
           git remote -v
 
@@ -118,7 +126,7 @@ jobs:
           git checkout -B $branch
           git add --all -- ':!node_modules'
           git commit -m "Auto patch via Local Coding Runner (run ${{ github.run_id }})" || echo "No changes to commit"
-          $sshCmd = 'C:/Windows/System32/OpenSSH/ssh.exe -i C:/Users/maanh/.ssh/id_agent_runner -o IdentitiesOnly=yes -o StrictHostKeyChecking=no'
+          $sshCmd = 'C:/Windows/System32/OpenSSH/ssh.exe -i C:/tempkey/id_agent_runner -o IdentitiesOnly=yes -o StrictHostKeyChecking=no'
           git -c "core.sshCommand=$sshCmd" push -f origin $branch
 
       # 🔄 Temporarily switch to HTTPS just for PR creation
