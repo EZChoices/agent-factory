@@ -106,15 +106,20 @@ jobs:
       # 🔐 Prepare SSH key from GitHub secret (RUNNER_SSH_KEY)
       - name: Prepare SSH key
         run: |
-          mkdir C:\tempkey -Force
-          Set-Content -Path C:\tempkey\id_agent_runner -Value "${{ secrets.RUNNER_SSH_KEY }}" -NoNewline
-          icacls C:\tempkey\id_agent_runner /inheritance:r /grant:r "Users:R"
-          Write-Host "✅ SSH key written to C:\\tempkey\\id_agent_runner"
+          $keyDir = "$env:RUNNER_TEMP\sshkey"
+          New-Item -ItemType Directory -Force -Path $keyDir | Out-Null
+          $keyPath = "$keyDir\id_agent_runner"
+          Set-Content -Path $keyPath -Value "${{ secrets.RUNNER_SSH_KEY }}" -NoNewline
+          icacls $keyPath /inheritance:r /grant:r "${env:USERNAME}:R"
+          Write-Host "✅ SSH key written to $keyPath"
+        env:
+          RUNNER_TEMP: ${{ runner.temp }}
 
       - name: Configure Git remote (SSH)
         run: |
           cd $env:GITHUB_WORKSPACE
-          $env:GIT_SSH_COMMAND = 'C:/Windows/System32/OpenSSH/ssh.exe -i C:/tempkey/id_agent_runner -o IdentitiesOnly=yes -o StrictHostKeyChecking=no'
+          $keyPath = "$env:RUNNER_TEMP\sshkey\id_agent_runner"
+          $env:GIT_SSH_COMMAND = "C:/Windows/System32/OpenSSH/ssh.exe -i $keyPath -o IdentitiesOnly=yes -o StrictHostKeyChecking=no"
           git remote set-url origin git@github.com:EZChoices/agent-factory.git
           git remote -v
 
@@ -126,7 +131,8 @@ jobs:
           git checkout -B $branch
           git add --all -- ':!node_modules'
           git commit -m "Auto patch via Local Coding Runner (run ${{ github.run_id }})" || echo "No changes to commit"
-          $sshCmd = 'C:/Windows/System32/OpenSSH/ssh.exe -i C:/tempkey/id_agent_runner -o IdentitiesOnly=yes -o StrictHostKeyChecking=no'
+          $keyPath = "$env:RUNNER_TEMP\sshkey\id_agent_runner"
+          $sshCmd = "C:/Windows/System32/OpenSSH/ssh.exe -i $keyPath -o IdentitiesOnly=yes -o StrictHostKeyChecking=no"
           git -c "core.sshCommand=$sshCmd" push -f origin $branch
 
       # 🔄 Temporarily switch to HTTPS just for PR creation
@@ -136,7 +142,7 @@ jobs:
           git remote set-url origin https://github.com/EZChoices/agent-factory.git
           git remote -v
 
-      # 🪄 Create PR using GITHUB_TOKEN (required by v6)
+      # 🪄 Create Pull Request
       - name: Create Pull Request
         id: cpr
         uses: peter-evans/create-pull-request@v6
@@ -165,7 +171,7 @@ jobs:
         if: steps.cpr.outputs.pull-request-number == ''
         run: echo "No new changes detected — ending workflow gracefully."
 
-      # 🔁 Restore SSH remote for next run (for future large pushes)
+      # 🔁 Restore SSH remote for next run
       - name: Restore SSH remote for future runs
         if: always()
         run: |
