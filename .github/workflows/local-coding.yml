@@ -118,8 +118,8 @@ jobs:
       - name: Configure Git remote (SSH)
         run: |
           cd $env:GITHUB_WORKSPACE
-          $keyPath = "$env:RUNNER_TEMP\sshkey\id_agent_runner"
-          $env:GIT_SSH_COMMAND = "C:/Windows/System32/OpenSSH/ssh.exe -i $keyPath -o IdentitiesOnly=yes -o StrictHostKeyChecking=no"
+          $keyPath = Join-Path $env:RUNNER_TEMP "sshkey\id_agent_runner"
+          $env:GIT_SSH_COMMAND = "C:/Windows/System32/OpenSSH/ssh.exe -i `"$keyPath`" -o IdentitiesOnly=yes -o StrictHostKeyChecking=no"
           git remote set-url origin git@github.com:EZChoices/agent-factory.git
           git remote -v
 
@@ -131,8 +131,8 @@ jobs:
           git checkout -B $branch
           git add --all -- ':!node_modules'
           git commit -m "Auto patch via Local Coding Runner (run ${{ github.run_id }})" || echo "No changes to commit"
-          $keyPath = "$env:RUNNER_TEMP\sshkey\id_agent_runner"
-          $sshCmd = "C:/Windows/System32/OpenSSH/ssh.exe -i $keyPath -o IdentitiesOnly=yes -o StrictHostKeyChecking=no"
+          $keyPath = Join-Path $env:RUNNER_TEMP "sshkey\id_agent_runner"
+          $sshCmd = "C:/Windows/System32/OpenSSH/ssh.exe -i `"$keyPath`" -o IdentitiesOnly=yes -o StrictHostKeyChecking=no"
           git -c "core.sshCommand=$sshCmd" push -f origin $branch
 
       # 🔄 Temporarily switch to HTTPS just for PR creation
