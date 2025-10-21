@@ -1,0 +1,16 @@
+name: MCP Dispatch Test
+
+on:
+  repository_dispatch:
+    types: [ping_test]
+
+jobs:
+  echo:
+    runs-on: windows-latest
+    steps:
+      - name: Confirm Trigger
+        run: |
+          echo "✅ Repository Dispatch event received successfully!"
+          echo "Event type: ${{ github.event.action }}"
+          echo "Payload:"
+          echo "${{ toJson(github.event.client_payload) }}"
