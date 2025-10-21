@@ -105,11 +105,18 @@ jobs:
 
       # 🔐 Prepare SSH key from GitHub secret (RUNNER_SSH_KEY)
       - name: Prepare SSH key
+        shell: pwsh
         run: |
           $keyDir = "$env:RUNNER_TEMP\sshkey"
           New-Item -ItemType Directory -Force -Path $keyDir | Out-Null
           $keyPath = "$keyDir\id_agent_runner"
-          [System.IO.File]::WriteAllText($keyPath, "${{ secrets.RUNNER_SSH_KEY }}", [System.Text.Encoding]::ASCII)
+
+          # Use Raw to preserve newlines exactly
+          $keyContent = @'
+${{ secrets.RUNNER_SSH_KEY }}
+'@
+
+          [System.IO.File]::WriteAllText($keyPath, $keyContent, [System.Text.Encoding]::UTF8)
           icacls $keyPath /inheritance:r /grant:r "${env:USERNAME}:R"
           Write-Host "🔍 First lines of key file:"
           Get-Content $keyPath | Select-Object -First 3
