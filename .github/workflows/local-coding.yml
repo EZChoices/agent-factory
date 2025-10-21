@@ -109,7 +109,7 @@ jobs:
           $keyDir = "$env:RUNNER_TEMP\sshkey"
           New-Item -ItemType Directory -Force -Path $keyDir | Out-Null
           $keyPath = "$keyDir\id_agent_runner"
-          Set-Content -Path $keyPath -Value "${{ secrets.RUNNER_SSH_KEY }}" -NoNewline
+          Set-Content -Path $keyPath -Value "${{ secrets.RUNNER_SSH_KEY }}" -Encoding ascii -NoNewline
           icacls $keyPath /inheritance:r /grant:r "${env:USERNAME}:R"
           Write-Host "✅ SSH key written to $keyPath"
         env:
