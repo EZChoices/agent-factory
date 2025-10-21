@@ -3,7 +3,7 @@ name: Local Coding Runner
 on:
   workflow_dispatch:
   repository_dispatch:
-    types: [nightly_ticket]
+    types: [nightly_ticket, run_ci]
   push:
     branches:
       - main
